@@ -1,0 +1,281 @@
+# Flutter Localization String Extractor
+
+A Flutter package that automatically extracts hardcoded strings from your Dart files and converts them into proper Flutter localization (intl) format with ARB files support.
+
+## Features
+
+- 🌍 **Full Flutter Localization Support**: Generates ARB files and integrates with `flutter_gen`
+- 🔍 **Smart String Detection**: Finds hardcoded strings in single and double quotes
+- 🔧 **Variable Interpolation**: Detects and handles strings with variables (`$variable`, `${expression}`)
+- 📝 **Auto-replacement**: Replaces hardcoded strings with `AppLocalizations.of(context)!.key` calls
+- 🎯 **Context-aware**: Handles different contexts (Text widgets, titles, etc.)
+- 📋 **Dependency Checking**: Verifies required dependencies are installed
+- ⚡ **Batch Processing**: Processes entire directories efficiently
+
+## Prerequisites
+
+This package requires:
+- `intl: ^0.18.1`
+- `flutter_localizations` (from Flutter SDK)
+
+The package will check for these dependencies and guide you if they're missing.
+
+## Installation
+
+Add to your `pubspec.yaml`:
+
+```yaml
+dev_dependencies:
+  string_extractor: ^1.0.0
+```
+
+Or install globally:
+
+```bash
+dart pub global activate string_extractor
+```
+
+## Quick Start
+
+1. **Extract strings** from your Flutter project:
+   ```bash
+   dart pub run string_extractor:extract_strings
+   ```
+
+2. **Add missing dependencies** if prompted:
+   ```yaml
+   dependencies:
+     flutter_localizations:
+       sdk: flutter
+     intl: ^0.18.1
+   ```
+
+3. **Generate localization files**:
+   ```bash
+   flutter gen-l10n
+   ```
+
+4. **Update your MaterialApp**:
+   ```dart
+   import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+   
+   MaterialApp(
+     localizationsDelegates: AppLocalizations.localizationsDelegates,
+     supportedLocales: AppLocalizations.supportedLocales,
+     // ...
+   )
+   ```
+
+## Command Line Options
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--input`, `-i` | `lib` | Input directory to scan |
+| `--output`, `-o` | `lib/l10n` | Output directory for ARB files |
+| `--template-arb` | `app_en.arb` | Template ARB file name |
+| `--class-name`, `-c` | `AppLocalizations` | Localization class name |
+| `--replace`, `-r` | `false` | Replace strings with localization calls |
+| `--check-deps` | `true` | Check for required dependencies |
+
+## Usage Examples
+
+### Basic extraction:
+```bash
+dart pub run string_extractor:extract_strings
+```
+
+### Extract and replace in files:
+```bash
+dart pub run string_extractor:extract_strings --replace
+```
+
+### Custom configuration:
+```bash
+dart pub run string_extractor:extract_strings \
+  --input lib \
+  --output assets/l10n \
+  --template-arb strings_en.arb \
+  --class-name MyLocalizations \
+  --replace
+```
+
+## Examples
+
+### Simple Strings
+
+**Before:**
+```dart
+Text("Hello World")
+AppBar(title: Text("My App"))
+```
+
+**Generated ARB (app_en.arb):**
+```json
+{
+  "helloWorld": "Hello World",
+  "@helloWorld": {
+    "description": "Localized string"
+  },
+  "myApp": "My App",
+  "@myApp": {
+    "description": "Localized string"
+  }
+}
+```
+
+**After replacement:**
+```dart
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+
+Text(AppLocalizations.of(context)!.helloWorld)
+AppBar(title: Text(AppLocalizations.of(context)!.myApp))
+```
+
+### Strings with Variables
+
+**Before:**
+```dart
+Text("Welcome, $username!")
+Text("You have ${count} messages")
+```
+
+**Generated ARB:**
+```json
+{
+  "welcomeUsername": "Welcome, {username}!",
+  "@welcomeUsername": {
+    "description": "Localized string with parameters: username",
+    "placeholders": {
+      "username": {
+        "type": "String",
+        "example": "John"
+      }
+    }
+  },
+  "youHaveCountMessages": "You have {count} messages",
+  "@youHaveCountMessages": {
+    "description": "Localized string with parameters: count",
+    "placeholders": {
+      "count": {
+        "type": "String",
+        "example": "value"
+      }
+    }
+  }
+}
+```
+
+**After replacement:**
+```dart
+Text(AppLocalizations.of(context)!.welcomeUsername('Alice'))
+Text(AppLocalizations.of(context)!.youHaveCountMessages('5'))
+```
+
+## Generated Files
+
+The package creates:
+
+1. **ARB file** (`lib/l10n/app_en.arb`): Contains all extracted strings in ARB format
+2. **l10n.yaml**: Configuration file for Flutter's localization generation
+3. **Updated Dart files**: With localization calls (if `--replace` is used)
+
+## Project Structure After Extraction
+
+```
+your_project/
+├── lib/
+│   ├── l10n/
+│   │   └── app_en.arb          # Generated ARB file
+│   └── your_dart_files.dart    # Updated with localization calls
+├── l10n.yaml                   # Localization configuration
+└── pubspec.yaml               # Updated dependencies
+```
+
+## Adding More Languages
+
+After initial extraction, add more ARB files:
+
+```
+lib/l10n/
+├── app_en.arb  # English (template)
+├── app_es.arb  # Spanish
+├── app_fr.arb  # French
+└── app_de.arb  # German
+```
+
+Example `app_es.arb`:
+```json
+{
+  "helloWorld": "Hola Mundo",
+  "myApp": "Mi Aplicación"
+}
+```
+
+## Integration with CI/CD
+
+Add to your build process:
+
+```yaml
+# GitHub Actions example
+- name: Extract and generate localizations
+  run: |
+    dart pub run string_extractor:extract_strings --replace
+    flutter gen-l10n
+    flutter test
+```
+
+## Smart Filtering
+
+The package automatically ignores:
+- Import/export statements
+- Asset paths and file extensions
+- URLs and technical strings
+- Very short strings and numbers
+- Flutter framework related strings
+
+## Best Practices
+
+1. **Run extraction early** in development to establish good patterns
+2. **Review generated ARB files** before committing
+3. **Use meaningful variable names** in interpolated strings
+4. **Test with `--replace`** on a copy first
+5. **Keep ARB files in version control**
+
+## Troubleshooting
+
+### Missing Dependencies
+```
+⚠️  Missing required dependencies in pubspec.yaml:
+Add these to your dependencies section:
+  intl: ^0.18.1
+  flutter_localizations:
+    sdk: flutter
+```
+
+### Generation Issues
+```bash
+# Clean and regenerate
+flutter clean
+flutter pub get
+flutter gen-l10n
+```
+
+### Import Issues
+Make sure your `MaterialApp` is properly configured:
+```dart
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+
+MaterialApp(
+  localizationsDelegates: AppLocalizations.localizationsDelegates,
+  supportedLocales: AppLocalizations.supportedLocales,
+  // ...
+)
+```
+
+## Contributing
+
+Contributions welcome! Please read our contributing guidelines and submit pull requests.
+
+## License
+
+MIT License
