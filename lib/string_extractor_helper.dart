@@ -97,6 +97,13 @@ class LocalizationStringExtractor {
 
   Future<void> _processFile(File file, String className, bool replaceInFiles) async {
     final content = await file.readAsString();
+
+    // Skip files that contain MaterialApp widget - context not available yet
+    if (_containsMaterialApp(content)) {
+      print('ℹ️  Skipping ${file.path} - contains MaterialApp widget');
+      return;
+    }
+
     final strings = _extractStringsFromContent(content);
 
     if (strings.isEmpty) return;
@@ -147,6 +154,18 @@ class LocalizationStringExtractor {
       await file.writeAsString(updatedContent);
       _processedFiles.add(file.path);
     }
+  }
+
+  bool _containsMaterialApp(String content) {
+    // Check if the file contains MaterialApp widget
+    final materialAppPatterns = [
+      RegExp(r'\bMaterialApp\s*\('),
+      RegExp(r'\bCupertinoApp\s*\('),
+      RegExp(r'class\s+\w*App\s+extends\s+StatelessWidget'),
+      RegExp(r'class\s+\w*App\s+extends\s+StatefulWidget'),
+    ];
+
+    return materialAppPatterns.any((pattern) => pattern.hasMatch(content));
   }
 
   List<Map<String, String>> _extractStringsFromContent(String content) {
@@ -238,19 +257,19 @@ class LocalizationStringExtractor {
 
   String _generateMethodCall(String className, String keyName, List<String> variables, String context) {
     if (context == 'text') {
-      final params = variables.map((v) => "'$v'").join(', ');
-      return 'Text($className.of(context)!.$keyName($params))';
+      final params = variables.map((v) => '\$$v').join(', ');
+      return 'Text($className.of(context).$keyName($params))';
     } else {
-      final params = variables.map((v) => "'$v'").join(', ');
-      return '$className.of(context)!.$keyName($params)';
+      final params = variables.map((v) => '\$$v').join(', ');
+      return '$className.of(context).$keyName($params)';
     }
   }
 
   String _generateSimpleCall(String className, String keyName, String context) {
     if (context == 'text') {
-      return 'Text($className.of(context)!.$keyName)';
+      return 'Text($className.of(context).$keyName)';
     } else {
-      return '$className.of(context)!.$keyName';
+      return '$className.of(context).$keyName';
     }
   }
 
@@ -331,7 +350,7 @@ class LocalizationStringExtractor {
   }
 
   String _addImportIfNeeded(String content, String className) {
-    final importStatement = "import 'package:flutter_gen/gen_l10n/$className.dart';";
+    final importStatement = "import 'l10n/generated/app_localizations.dart';";
 
     if (content.contains(importStatement)) {
       return content;
@@ -395,16 +414,16 @@ class LocalizationStringExtractor {
       return;
     }
 
-    final l10nConfig = '''
-arb-dir: $outputDirectory
+    final l10nConfig = '''arb-dir: $outputDirectory
 template-arb-file: app_en.arb
-output-localization-file: $className.dart
 output-class: $className
+output-localization-file: app_localizations.dart
+output-dir: $outputDirectory/generated
+nullable-getter: false
+synthetic-package: false
 ''';
 
     await l10nFile.writeAsString(l10nConfig);
     print('📄 Generated: l10n.yaml');
   }
 }
-
-// Add math import for max function
