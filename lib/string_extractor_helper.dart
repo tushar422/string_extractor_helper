@@ -55,7 +55,6 @@ class LocalizationStringExtractor {
     final pubspec = loadYaml(pubspecContent);
 
     final dependencies = pubspec['dependencies'] as Map?;
-    final devDependencies = pubspec['dev_dependencies'] as Map?;
 
     bool hasIntl = false;
     bool hasFlutterLocalizations = false;
@@ -97,13 +96,6 @@ class LocalizationStringExtractor {
 
   Future<void> _processFile(File file, String className, bool replaceInFiles) async {
     final content = await file.readAsString();
-
-    // Skip files that contain MaterialApp widget - context not available yet
-    if (_containsMaterialApp(content)) {
-      print('ℹ️  Skipping ${file.path} - contains MaterialApp widget');
-      return;
-    }
-
     final strings = _extractStringsFromContent(content);
 
     if (strings.isEmpty) return;
@@ -156,16 +148,22 @@ class LocalizationStringExtractor {
     }
   }
 
-  bool _containsMaterialApp(String content) {
-    // Check if the file contains MaterialApp widget
-    final materialAppPatterns = [
-      RegExp(r'\bMaterialApp\s*\('),
-      RegExp(r'\bCupertinoApp\s*\('),
-      RegExp(r'class\s+\w*App\s+extends\s+StatelessWidget'),
-      RegExp(r'class\s+\w*App\s+extends\s+StatefulWidget'),
-    ];
+  bool _isInMaterialAppTitle(String content, int position) {
+    // Look backwards from the string position to see if we're in a MaterialApp title
+    int start = math.max(0, position - 200);
+    String contextStr = content.substring(start, position);
 
-    return materialAppPatterns.any((pattern) => pattern.hasMatch(content));
+    // Check if we're within a MaterialApp context and specifically in title property
+    if (contextStr.contains('MaterialApp(') || contextStr.contains('CupertinoApp(')) {
+      // Look for title: pattern before our string
+      final titlePattern = RegExp(r'title\s*:\s*$');
+      final lines = contextStr.split('\n');
+      final lastLine = lines.isNotEmpty ? lines.last : '';
+
+      return titlePattern.hasMatch(lastLine.trim());
+    }
+
+    return false;
   }
 
   List<Map<String, String>> _extractStringsFromContent(String content) {
@@ -183,6 +181,9 @@ class LocalizationStringExtractor {
 
         // Skip if it's likely a import/export statement
         if (_isImportExportStatement(content, match.start)) continue;
+
+        // Skip if it's in MaterialApp title (no context available)
+        if (_isInMaterialAppTitle(content, match.start)) continue;
 
         // Get context (Text widget, etc.)
         final context = _getStringContext(content, match.start);
@@ -213,13 +214,6 @@ class LocalizationStringExtractor {
   }
 
   Map<String, dynamic> _detectVariables(String str) {
-    // Look for common variable patterns like $variable, ${variable}, or interpolation patterns
-    final variablePatterns = [
-      RegExp(r'\$\{([^}]+)\}'), // ${variable}
-      RegExp(r'\$([a-zA-Z_][a-zA-Z0-9_]*)'), // $variable
-      RegExp(r'\b([A-Z][a-zA-Z0-9]*|[a-z]+[A-Z][a-zA-Z0-9]*)\b'), // Potential variable names in context
-    ];
-
     final Set<String> variables = {};
     String template = str;
 
