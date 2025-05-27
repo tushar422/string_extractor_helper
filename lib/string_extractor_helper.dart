@@ -250,21 +250,12 @@ class LocalizationStringExtractor {
   }
 
   String _generateMethodCall(String className, String keyName, List<String> variables, String context) {
-    if (context == 'text') {
-      final params = variables.map((v) => '\$$v').join(', ');
-      return 'Text($className.of(context).$keyName($params))';
-    } else {
-      final params = variables.map((v) => '\$$v').join(', ');
-      return '$className.of(context).$keyName($params)';
-    }
+    final params = variables.map((v) => '\$v').join(', ');
+    return '$className.of(context).$keyName($params)';
   }
 
   String _generateSimpleCall(String className, String keyName, String context) {
-    if (context == 'text') {
-      return 'Text($className.of(context).$keyName)';
-    } else {
-      return '$className.of(context).$keyName';
-    }
+    return '$className.of(context).$keyName';
   }
 
   Map<String, Map<String, String>> _generatePlaceholders(List<String> variables) {
@@ -377,6 +368,9 @@ class LocalizationStringExtractor {
 
     final arbFile = File(path.join(outputDirectory, templateArbFile));
     final Map<String, dynamic> arbData = {};
+
+    // Add locale annotation at the beginning
+    arbData['@@locale'] = 'en';
 
     final sortedKeys = _extractedStrings.keys.toList()..sort();
 
