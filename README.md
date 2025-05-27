@@ -11,7 +11,7 @@ A Flutter package that automatically extracts hardcoded strings from your Dart f
 - 🎯 **Context-aware**: Handles different contexts (Text widgets, titles, etc.)
 - 📋 **Dependency Checking**: Verifies required dependencies are installed
 - ⚡ **Batch Processing**: Processes entire directories efficiently
-- 🛡️ **MaterialApp Safe**: Automatically skips MaterialApp files where context isn't available
+- 🛡️ **MaterialApp Safe**: Automatically skips MaterialApp title properties where context isn't available
 
 ## Prerequisites
 
@@ -247,7 +247,7 @@ The package automatically ignores:
 - URLs and technical strings
 - Very short strings and numbers
 - Flutter framework related strings
-- **MaterialApp and CupertinoApp files** (where context isn't available)
+- **MaterialApp title properties** (where context isn't available)
 
 ## Best Practices
 
@@ -289,8 +289,17 @@ MaterialApp(
 )
 ```
 
-### MaterialApp Context Issues
-The package automatically skips files containing MaterialApp widgets since the localization context isn't available during app initialization. If you have strings in your main app file that need localization, consider moving them to separate widgets that have access to the BuildContext.
+### MaterialApp Title Context Issues
+The package automatically skips strings that are used in MaterialApp's `title:` property since the localization context isn't available during app initialization. For example:
+
+```dart
+MaterialApp(
+  title: 'Flutter Demo', // This will be skipped
+  home: MyHomePage(),
+)
+```
+
+If you need to localize the app title, consider setting it dynamically after the MaterialApp is built, or handle it separately in your app's initialization logic.
 
 ## Contributing & Support
 
