@@ -392,13 +392,13 @@
       "languageVersion": "3.4"
     },
     {
-      "name": "string_extractor",
+      "name": "string_extractor_intl",
       "rootUri": "../",
       "packageUri": "lib/",
       "languageVersion": "3.7"
     }
   ],
-  "generated": "2025-05-28T04:03:21.262497Z",
+  "generated": "2025-05-28T05:26:19.525782Z",
   "generator": "pub",
   "generatorVersion": "3.7.2",
   "flutterRoot": "file:///Users/shafimnajib/apps/flutter",

@@ -1,5 +1,6 @@
 name: string_extractor_intl
-description: A Flutter package to extract hardcoded strings from /lib, Dart files
+description: A Flutter package that extracts hardcoded strings and generates .arb files from Dart files or lib directory for use in internationalization (i18n).
+
 version: 1.0.0
 homepage:
 
