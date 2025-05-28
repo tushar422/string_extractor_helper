@@ -19,7 +19,7 @@ Add this package as a dev dependency in your `pubspec.yaml`:
 
 ```yaml
 dev_dependencies:
-  string_extractor_intl: ^1.0.1
+  string_extractor_intl: ^1.0.2
 ```
 
 Then run:
