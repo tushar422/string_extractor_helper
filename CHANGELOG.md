@@ -1,3 +1,6 @@
-## 0.0.1
+## 1.0.0
 
-* TODO: Describe initial release.
+- Initial release of `string_extractor_intl`.
+- Extracts hardcoded strings from Dart files in the `/lib` directory.
+- Generates `.arb` files to support Flutter internationalization (i18n).
+- Supports command-line usage via `dart pub run string_extractor_intl:extract_strings`.

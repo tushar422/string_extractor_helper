@@ -2,7 +2,7 @@
 
 import 'dart:io';
 import 'package:args/args.dart';
-import 'package:string_extractor_intl/string_extractor_helper.dart';
+import 'package:string_extractor_intl/string_extractor_intl.dart';
 
 
 void main(List<String> arguments) async {
