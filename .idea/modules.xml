@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/string_extractor_helper.iml" filepath="$PROJECT_DIR$/string_extractor_helper.iml" />
+      <module fileurl="file://$PROJECT_DIR$/string_extractor_intl.iml" filepath="$PROJECT_DIR$/string_extractor_intl.iml" />
     </modules>
   </component>
 </project>
