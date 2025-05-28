@@ -1,5 +1,5 @@
-name: string_extractor
-description: A Flutter package to extract hardcoded strings from Dart files
+name: string_extractor_intl
+description: A Flutter package to extract hardcoded strings from /lib, Dart files
 version: 1.0.0
 homepage:
 
