@@ -42,6 +42,10 @@ class LocalizationStringExtractor {
 
     if (replaceInFiles) {
       print('🔄 Updated ${_processedFiles.length} files with localization calls');
+
+      // Automatically run flutter gen-l10n after replacement
+      print('🏗️  Running flutter gen-l10n...');
+      await _runFlutterGenL10n();
     }
   }
 
@@ -67,7 +71,7 @@ class LocalizationStringExtractor {
     final List<String> missingDeps = [];
 
     if (!hasIntl) {
-      missingDeps.add('intl: ^0.18.1');
+      missingDeps.add('intl: ^0.19.0');
     }
 
     if (!hasFlutterLocalizations) {
@@ -143,6 +147,8 @@ class LocalizationStringExtractor {
       if (needsImport) {
         updatedContent = _addImportIfNeeded(updatedContent, className);
       }
+      // Add MaterialApp localization configuration if needed
+      updatedContent = _addMaterialAppLocalization(updatedContent, className);
       await file.writeAsString(updatedContent);
       _processedFiles.add(file.path);
     }
@@ -250,11 +256,13 @@ class LocalizationStringExtractor {
   }
 
   String _generateMethodCall(String className, String keyName, List<String> variables, String context) {
-    final params = variables.map((v) => '\$v').join(', ');
+    // Fix: Use the actual variable names and cast to String
+    final params = variables.map((v) => '\$v as String').join(', ');
     return '$className.of(context).$keyName($params)';
   }
 
   String _generateSimpleCall(String className, String keyName, String context) {
+    // Fix: Remove null check operator (!) - it's not needed
     return '$className.of(context).$keyName';
   }
 
@@ -360,6 +368,62 @@ class LocalizationStringExtractor {
     }
 
     return lines.join('\n');
+  }
+
+  // Fix: Add MaterialApp localization configuration
+  String _addMaterialAppLocalization(String content, String className) {
+    // Check if MaterialApp exists and doesn't already have localization config
+    if (!content.contains('MaterialApp(')) {
+      return content;
+    }
+
+    // Check if localization config already exists
+    if (content.contains('localizationsDelegates:') || content.contains('supportedLocales:')) {
+      return content;
+    }
+
+    // Find MaterialApp( and add localization config
+    final materialAppPattern = RegExp(r'MaterialApp\s*\(');
+    final match = materialAppPattern.firstMatch(content);
+
+    if (match != null) {
+      final insertPosition = match.end;
+      final beforeInsertion = content.substring(0, insertPosition);
+      final afterInsertion = content.substring(insertPosition);
+
+      // Add localization delegates and supported locales
+      final localizationConfig = '''
+      localizationsDelegates: $className.localizationsDelegates,
+      supportedLocales: $className.supportedLocales,''';
+
+      return beforeInsertion + localizationConfig + afterInsertion;
+    }
+
+    return content;
+  }
+
+  Future<void> _runFlutterGenL10n() async {
+    try {
+      final result = await Process.run('flutter', ['gen-l10n']);
+
+      if (result.exitCode == 0) {
+        print('✅ flutter gen-l10n completed successfully');
+        if (result.stdout.toString().isNotEmpty) {
+          print(result.stdout);
+        }
+      } else {
+        print('⚠️  flutter gen-l10n completed with warnings');
+        if (result.stderr.toString().isNotEmpty) {
+          print('Error output: ${result.stderr}');
+        }
+        if (result.stdout.toString().isNotEmpty) {
+          print('Standard output: ${result.stdout}');
+        }
+      }
+    } catch (e) {
+      print('❌ Failed to run flutter gen-l10n: $e');
+      print('Please run "flutter gen-l10n" manually after the process completes.');
+    }
   }
 
   Future<void> _generateArbFile(String outputDirectory, String templateArbFile) async {
