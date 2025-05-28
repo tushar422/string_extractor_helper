@@ -19,7 +19,7 @@ Add this package as a dev dependency in your `pubspec.yaml`:
 
 ```yaml
 dev_dependencies:
-  string_extractor: ^1.0.0
+  string_extractor_intl: ^1.0.0
 ```
 
 Then run:
@@ -47,7 +47,7 @@ dependencies:
 Extract strings and generate ARB files without modifying your source code:
 
 ```bash
-dart pub run string_extractor:extract_strings
+dart pub run string_extractor_intl:extract_strings
 ```
 
 ### Advanced Usage
@@ -55,13 +55,13 @@ dart pub run string_extractor:extract_strings
 **Extract and replace in files:**
 
 ```bash
-dart pub run string_extractor:extract_strings --replace
+dart pub run string_extractor_intl:extract_strings --replace
 ```
 
 **Custom configuration:**
 
 ```bash
-dart pub run string_extractor:extract_strings \
+dart pub run string_extractor_intl:extract_strings \
   --input lib \
   --output assets/l10n \
   --template-arb strings_en.arb \
@@ -72,7 +72,7 @@ dart pub run string_extractor:extract_strings \
 **Show help:**
 
 ```bash
-dart pub run string_extractor:extract_strings --help
+dart pub run string_extractor_intl:extract_strings --help
 ```
 
 ### Command Line Options
