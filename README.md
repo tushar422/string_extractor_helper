@@ -19,7 +19,7 @@ Add this package as a dev dependency in your `pubspec.yaml`:
 
 ```yaml
 dev_dependencies:
-  string_extractor_intl: ^1.0.0
+  string_extractor_intl: ^1.0.1
 ```
 
 Then run:
@@ -39,6 +39,10 @@ dependencies:
     sdk: flutter
   intl: ^0.19.0
 ```
+# The following section is specific to Flutter packages. for future generation
+flutter:
+uses-material-design: true
+generate: true
 
 ## Usage
 
@@ -113,7 +117,7 @@ flutter pub get
 flutter gen-l10n
 ```
 
-### **⚠️ IMPORTANT WARNINGS**
+### **⚠️ IMPORTANT WARNINGS before using --replace**
 - **Review all changes** before committing to version control
 - **Test your app thoroughly** after replacement
 - **Some strings may need manual adjustment** after automatic replacement
@@ -245,6 +249,7 @@ The tool creates several files:
      // ...
    )
    ```
+For more details, read [this article](https://mumin-ahmod.medium.com/flutter-string-extractor-package-from-hardcoded-strings-to-i18n-in-minutes-automate-flutter-187dc3ce33a5).
 
 ## Troubleshooting
 
