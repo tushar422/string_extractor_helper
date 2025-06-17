@@ -6,6 +6,7 @@
 
 - 🔍 **Automatically scans** your Flutter project for hardcoded strings
 - 📝 **Generates ARB files** with extracted strings
+- 📝 **Avoid Duplicates** when extracting
 - 🔄 **Replaces hardcoded strings** with localization calls (optional)
 - 🛠️ **Auto-configures MaterialApp** with localization delegates
 - 📋 **Detects string variables** and creates parameterized localizations
@@ -39,11 +40,12 @@ dependencies:
     sdk: flutter
   intl: ^0.19.0
 ```
-# The following section is specific to Flutter packages. for future generation
+```
+The following section is specific to Flutter packages. for future generation
 flutter:
 uses-material-design: true
 generate: true
-
+```
 ## Usage
 
 ### Basic Usage (Extract Only)
@@ -66,7 +68,7 @@ dart pub run string_extractor_intl:extract_strings --replace
 
 ```bash
 dart pub run string_extractor_intl:extract_strings \
-  --input lib \
+  --input lib/presentation \
   --output assets/l10n \
   --template-arb strings_en.arb \
   --class-name MyLocalizations \
@@ -81,16 +83,20 @@ dart pub run string_extractor_intl:extract_strings --help
 
 ### Command Line Options
 
-| Option | Short | Default | Description |
-|--------|-------|---------|-------------|
-| `--input` | `-i` | `lib` | Input directory to scan |
-| `--output` | `-o` | `lib/l10n` | Output directory for localization files |
-| `--template-arb` | | `app_en.arb` | Template ARB file name |
+| Option | Short | Default            | Description |
+|--------|-------|--------------------|-------------|
+| `--input` | `-i` | `lib/presentation` | Input directory to scan |
+| `--output` | `-o` | `lib/l10n`         | Output directory for localization files |
+| `--template-arb` | | `app_en.arb`       | Template ARB file name |
 | `--class-name` | `-c` | `AppLocalizations` | Name of the localization class |
-| `--replace` | `-r` | `false` | Replace hardcoded strings with localization calls |
-| `--check-deps` | | `true` | Check for required dependencies |
-| `--help` | `-h` | | Show usage information |
+| `--replace` | `-r` | `false`            | Replace hardcoded strings with localization calls |
+| `--check-deps` | | `true`             | Check for required dependencies |
+| `--help` | `-h` |                    | Show usage information |
 
+## ⚠️ Suggestion: run the extraction on the Presentation folder only to avoid taking unnecessary strings with: 
+```
+dart pub run string_extractor_intl:extract_strings \ --input lib/presentation \
+```
 ## ⚠️ CAUTION: Before Running with --replace Flag
 
 **READ THIS CAREFULLY BEFORE USING THE `--replace` OPTION:**
@@ -136,8 +142,8 @@ The tool scans your Dart files and identifies hardcoded strings, excluding:
 
 ### 2. Variable Detection
 Automatically detects variables in strings:
-- `"Hello $_name"` → `AppLocalizations.of(context).hello('$_name')`
-- `"Count: ${count}"` → `AppLocalizations.of(context).count('$count')`
+- `"Hello $_name"` → `S.of(context).hello('$_name')`
+- `"Count: ${count}"` → `S.of(context).count('$count')`
 
 ### 3. ARB File Generation
 Creates structured ARB files with:
@@ -179,12 +185,12 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
-      title: AppLocalizations.of(context).myApp,
+      localizationsDelegates: S.localizationsDelegates,
+      supportedLocales: S.supportedLocales,
+      title: S.of(context).myApp,
       home: Scaffold(
-        appBar: AppBar(title: Text(AppLocalizations.of(context).welcome)),
-        body: Text(AppLocalizations.of(context).hello('$_username')),
+        appBar: AppBar(title: Text(S.of(context).welcome)),
+        body: Text(S.of(context).hello('$_username')),
       ),
     );
   }
@@ -244,8 +250,8 @@ The tool creates several files:
    
    // In your MaterialApp
    MaterialApp(
-     localizationsDelegates: AppLocalizations.localizationsDelegates,
-     supportedLocales: AppLocalizations.supportedLocales,
+     localizationsDelegates: S.localizationsDelegates,
+     supportedLocales: S.supportedLocales,
      // ...
    )
    ```

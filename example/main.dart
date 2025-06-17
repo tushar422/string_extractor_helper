@@ -12,8 +12,8 @@ class MyApp extends StatelessWidget {
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
+    return MaterialApp(      localizationsDelegates: S.localizationsDelegates,
+      supportedLocales: S.supportedLocales,
 
       title: 'Flutter Demo',
       theme: ThemeData(
@@ -61,9 +61,9 @@ class _MyHomePageState extends State<MyHomePage> {
 
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
-            Text(AppLocalizations.of(context).youHavePushedTheButtonThisManyTimes),
+            Text(S.of(context).youHavePushedTheButtonThisManyTimes),
             Text(
-              AppLocalizations.of(context).counter(_counter as String),
+              S.of(context).counter(_counter as String),
               style: Theme.of(context).textTheme.headlineMedium,
             ),
           ],
@@ -71,7 +71,7 @@ class _MyHomePageState extends State<MyHomePage> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _incrementCounter,
-        tooltip: AppLocalizations.of(context).increment,
+        tooltip: S.of(context).increment,
         child: const Icon(Icons.add),
       ), // This trailing comma makes auto-formatting nicer for build methods.
     );

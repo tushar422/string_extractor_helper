@@ -326,7 +326,7 @@ class LocalizationStringExtractor {
       'WrapAlignment.', 'WrapCrossAlignment.', 'VerticalDirection.', 'Axis.', 'BoxShape.',
       'BoxBorder.', 'BorderStyle.', 'TableBorder.', 'TableCellVerticalAlignment.', 'TableRowInkDecoration.',
       'HitTestBehavior.', 'MaterialType.', 'MaterialTapTargetSize.', 'SnackBarBehavior.', 'SnackBarClosedReason.',
-      'TooltipTriggerMode.', 'AdaptiveTextSelectionToolbar.buttonItems',
+      'TooltipTriggerMode.', 'AdaptiveTextSelectionToolbar.buttonItems','print('
     ];
 
     return ignoredPatterns.any((pattern) => str.contains(pattern));
