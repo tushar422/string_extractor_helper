@@ -1,4 +1,7 @@
-
+## 1.0.4
+- Class name changed to S, duplicate issue solved
+## 1.0.3
+## 1.0.2
 ## 1.0.1
 - Updated README.md with improved documentation.
 
