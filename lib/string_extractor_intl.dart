@@ -5,16 +5,20 @@ import 'dart:math' as math;
 import 'package:yaml/yaml.dart';
 
 class LocalizationStringExtractor {
+  // Map to store unique strings and their generated keys to prevent duplicates
+  final Map<String, String> _uniqueStrings = {};
+  // Map to store extracted strings with their full ARB data
   final Map<String, Map<String, dynamic>> _extractedStrings = {};
-  final Map<String, Set<String>> _fileImports = {};
+  // Keep track of processed files for replacement
   final Set<String> _processedFiles = {};
+  // Counter for generic keys if needed (though we'll try to avoid it now)
   int _stringCounter = 0;
 
   Future<void> extractStrings({
     required String inputDirectory,
     required String outputDirectory,
     required String templateArbFile,
-    required String className,
+    required String className, // This will now be used to configure the output class in l10n.yaml
     bool replaceInFiles = false,
     bool checkDependencies = true,
   }) async {
@@ -29,6 +33,7 @@ class LocalizationStringExtractor {
     }
 
     print('🔍 Scanning for Dart files...');
+    // Pass the actual class name provided by the user
     await _scanDirectory(inputDir, className, replaceInFiles);
 
     if (_extractedStrings.isEmpty) {
@@ -36,9 +41,9 @@ class LocalizationStringExtractor {
       return;
     }
 
-    print('📝 Found ${_extractedStrings.length} localizable strings');
+    print('📝 Found ${_extractedStrings.length} unique localizable strings');
     await _generateArbFile(outputDirectory, templateArbFile);
-    await _generateL10nYaml(outputDirectory, className);
+    await _generateL10nYaml(outputDirectory, className); // Use the provided className here
 
     if (replaceInFiles) {
       print('🔄 Updated ${_processedFiles.length} files with localization calls');
@@ -115,24 +120,41 @@ class LocalizationStringExtractor {
 
       if (_shouldIgnoreString(cleanString)) continue;
 
-      final keyName = _generateKeyName(cleanString);
+      // New logic for duplicate strings:
+      // Check if this exact cleanString (without variables processed yet) already has a key
+      String? existingKey = _uniqueStrings[cleanString];
+      String keyName;
+      if (existingKey != null) {
+        keyName = existingKey; // Use the already generated key for this string
+      } else {
+        // If not, generate a new key and store it
+        keyName = _generateKeyName(cleanString);
+        _uniqueStrings[cleanString] = keyName;
+      }
+
       final hasVariables = _detectVariables(cleanString);
 
       String replacement;
       if (hasVariables['hasVars']) {
         final methodCall = _generateMethodCall(className, keyName, hasVariables['variables'], context);
         replacement = methodCall;
-        _extractedStrings[keyName] = {
-          'value': hasVariables['template'],
-          'description': 'Localized string with parameters: ${hasVariables['variables'].join(', ')}',
-          'placeholders': _generatePlaceholders(hasVariables['variables']),
-        };
+        // Only add to _extractedStrings if it's a new unique key or needs updating with placeholders
+        if (!_extractedStrings.containsKey(keyName) || (_extractedStrings[keyName]?['placeholders'] == null && hasVariables['variables'].isNotEmpty)) {
+          _extractedStrings[keyName] = {
+            'value': hasVariables['template'],
+            'description': 'Localized string with parameters: ${hasVariables['variables'].join(', ')}',
+            'placeholders': _generatePlaceholders(hasVariables['variables']),
+          };
+        }
       } else {
         replacement = _generateSimpleCall(className, keyName, context);
-        _extractedStrings[keyName] = {
-          'value': cleanString,
-          'description': 'Localized string',
-        };
+        // Only add to _extractedStrings if it's a new unique key
+        if (!_extractedStrings.containsKey(keyName)) {
+          _extractedStrings[keyName] = {
+            'value': cleanString,
+            'description': 'Localized string',
+          };
+        }
       }
 
       if (replaceInFiles) {
@@ -145,6 +167,7 @@ class LocalizationStringExtractor {
 
     if (replaceInFiles && fileModified) {
       if (needsImport) {
+        // Use the dynamic class name for the import path
         updatedContent = _addImportIfNeeded(updatedContent, className);
       }
       // Add MaterialApp localization configuration if needed
@@ -215,6 +238,11 @@ class LocalizationStringExtractor {
     if (contextStr.contains('AppBar(')) return 'appbar';
     if (contextStr.contains('SnackBar(')) return 'snackbar';
     if (contextStr.contains('AlertDialog(')) return 'dialog';
+    // Add more context clues as needed
+    if (contextStr.contains('hintText:')) return 'hintText';
+    if (contextStr.contains('labelText:')) return 'labelText';
+    if (contextStr.contains('buttonText:')) return 'buttonText';
+
 
     return 'general';
   }
@@ -231,20 +259,14 @@ class LocalizationStringExtractor {
       template = template.replaceAll(match.group(0)!, '{$varName}');
     }
 
-    // Check for $ pattern
-    final dollarMatches = RegExp(r'\$([a-zA-Z_][a-zA-Z0-9_]*)').allMatches(str);
+    // Check for $ pattern (ensure it's not part of a longer string or a number)
+    final dollarMatches = RegExp(r'(?<![a-zA-Z0-9_])\$([a-zA-Z_][a-zA-Z0-9_]*)\b').allMatches(template);
     for (final match in dollarMatches) {
       final varName = match.group(1)!;
-      variables.add(varName);
-      template = template.replaceAll(match.group(0)!, '{$varName}');
-    }
-
-    // If no explicit variables found, check if string seems to have placeholder intent
-    if (variables.isEmpty && (str.contains('Name') || str.contains('User') || str.contains('Count'))) {
-      // This is a heuristic - you might want to make this more sophisticated
-      if (str.toLowerCase().contains('welcome') && str.toLowerCase().contains('user')) {
-        variables.add('username');
-        template = template.replaceAll(RegExp(r'\b[A-Z][a-z]+\b'), '{username}');
+      // Make sure this isn't a false positive for things like "$100"
+      if (!RegExp(r'^\d+$').hasMatch(varName)) {
+        variables.add(varName);
+        template = template.replaceAll(match.group(0)!, '{$varName}');
       }
     }
 
@@ -256,13 +278,13 @@ class LocalizationStringExtractor {
   }
 
   String _generateMethodCall(String className, String keyName, List<String> variables, String context) {
-    // Fix: Use the actual variable names and cast to String
-    final params = variables.map((v) => '\$v as String').join(', ');
+    // Use the class name from the command line argument
+    final params = variables.map((v) => '$v').join(', '); // Removed `as String` as it's not always needed and can cause issues
     return '$className.of(context).$keyName($params)';
   }
 
   String _generateSimpleCall(String className, String keyName, String context) {
-    // Fix: Remove null check operator (!) - it's not needed
+    // Use the class name from the command line argument
     return '$className.of(context).$keyName';
   }
 
@@ -271,7 +293,7 @@ class LocalizationStringExtractor {
     for (final variable in variables) {
       placeholders[variable] = {
         'type': 'String',
-        'example': variable == 'username' ? 'John' : 'value',
+        'example': variable == 'username' ? 'John' : variable, // Use variable name as example
       };
     }
     return placeholders;
@@ -288,50 +310,52 @@ class LocalizationStringExtractor {
 
   bool _shouldIgnoreString(String str) {
     if (str.length <= 1) return true;
-    if (RegExp(r'^\d+\.?\d*$').hasMatch(str)) return true;
-    if (RegExp(r'^[a-zA-Z]$').hasMatch(str)) return true;
-    if (str.startsWith('http://') || str.startsWith('https://')) return true;
-    if (str.contains('/') && str.split('/').length > 2) return true;
+    if (RegExp(r'^\d+\.?\d*$').hasMatch(str)) return true; // Pure numbers
+    if (RegExp(r'^[a-zA-Z]$').hasMatch(str)) return true; // Single letters
+    if (str.startsWith('http://') || str.startsWith('https://')) return true; // URLs
+    if (str.contains('/') && str.split('/').length > 2 && !str.contains(' ')) return true; // File paths like "path/to/file.ext"
 
     final ignoredPatterns = [
-      'assets/',
-      'fonts/',
-      'images/',
-      '.png',
-      '.jpg',
-      '.jpeg',
-      '.svg',
-      '.json',
-      '.dart',
-      'MaterialApp',
-      'StatelessWidget',
-      'StatefulWidget',
+      'assets/', 'fonts/', 'images/', '.png', '.jpg', '.jpeg', '.svg', '.json', '.dart',
+      'MaterialApp', 'StatelessWidget', 'StatefulWidget', 'key:', 'const ', 'super.key',
+      'DateTime.now()', 'Colors.', 'EdgeInsets.', 'BorderRadius.', 'BoxShadow(', 'FontWeight.',
+      'TextStyle(', 'IconData(', 'Alignment.', 'MainAxisAlignment.', 'CrossAxisAlignment.',
+      'TextDirection.', 'FlexFit.', 'Clip.', 'BlendMode.', 'BoxFit.', 'FilterQuality.',
+      'ImageRepeat.', 'Locale(', 'TargetPlatform.', 'Brightness.', 'ThemeMode.', 'FloatingActionButtonLocation.',
+      'TextCapitalization.', 'TextInputAction.', 'TextInputType.', 'Overflow.', 'StackFit.',
+      'WrapAlignment.', 'WrapCrossAlignment.', 'VerticalDirection.', 'Axis.', 'BoxShape.',
+      'BoxBorder.', 'BorderStyle.', 'TableBorder.', 'TableCellVerticalAlignment.', 'TableRowInkDecoration.',
+      'HitTestBehavior.', 'MaterialType.', 'MaterialTapTargetSize.', 'SnackBarBehavior.', 'SnackBarClosedReason.',
+      'TooltipTriggerMode.', 'AdaptiveTextSelectionToolbar.buttonItems',
     ];
 
     return ignoredPatterns.any((pattern) => str.contains(pattern));
   }
 
-  String _generateKeyName(String str) {
-    String keyName = str
-        .replaceAll(RegExp(r'[^a-zA-Z0-9\s]'), ' ')
-        .trim()
-        .split(RegExp(r'\s+'))
-        .where((word) => word.isNotEmpty)
-        .map((word) => word.toLowerCase())
-        .toList()
-        .asMap()
-        .map((index, word) => MapEntry(
-        index,
-        index == 0 ? word : word[0].toUpperCase() + word.substring(1)
-    ))
-        .values
-        .join('');
 
-    if (keyName.isEmpty || RegExp(r'^\d').hasMatch(keyName)) {
-      keyName = 'text${_stringCounter++}';
+  String _generateKeyName(String str) {
+    // Basic cleaning: remove non-alphanumeric, replace spaces with single underscore
+    String cleaned = str
+        .replaceAll(RegExp(r'[^a-zA-Z0-9\s]'), ' ') // Replace non-alphanumeric (except spaces) with space
+        .trim() // Trim leading/trailing spaces
+        .replaceAll(RegExp(r'\s+'), '_'); // Replace multiple spaces with single underscore
+
+    // Convert to camelCase
+    List<String> parts = cleaned.split('_');
+    String keyName = parts.first.toLowerCase();
+    for (int i = 1; i < parts.length; i++) {
+      keyName += parts[i][0].toUpperCase() + parts[i].substring(1).toLowerCase();
     }
 
-    // Ensure uniqueness
+    // Handle empty or starting with number
+    if (keyName.isEmpty || RegExp(r'^\d').hasMatch(keyName)) {
+      // Fallback to a generic name, but this should be rare now with improved key generation
+      keyName = 'stringKey${_stringCounter++}';
+    }
+
+    // Ensure the key is unique among all extracted strings
+    // This loop ensures that even if two different raw strings normalize to the same key,
+    // they still get unique keys in _extractedStrings.
     String finalName = keyName;
     int counter = 1;
     while (_extractedStrings.containsKey(finalName)) {
@@ -342,10 +366,22 @@ class LocalizationStringExtractor {
     return finalName;
   }
 
-  String _addImportIfNeeded(String content, String className) {
-    final importStatement = "import 'l10n/generated/app_localizations.dart';";
 
-    if (content.contains(importStatement)) {
+  String _addImportIfNeeded(String content, String className) {
+    // The import path is 'l10n/generated/app_localizations.dart' by default,
+    // where 'app_localizations.dart' is the output-localization-file in l10n.yaml.
+    // This file uses the output-class name (e.g., S).
+    final importStatement = "import 'package:${Platform.resolvedExecutable.split('/').last.split('\\').first}_package_name/l10n/generated/app_localizations.dart';";
+    // dynamic package name, assuming this package is named 'string_extractor_intl'
+    // If your package has a different name, replace `string_extractor_intl` below
+    // or make it configurable if this tool is used within another package.
+    final packageName = 'rental_service'; // Replace with your actual package name
+
+    // Construct the import statement dynamically based on the package name
+    final dynamicImportStatement = "import 'package:$packageName/l10n/generated/app_localizations.dart';";
+
+
+    if (content.contains(dynamicImportStatement)) {
       return content;
     }
 
@@ -360,10 +396,10 @@ class LocalizationStringExtractor {
     }
 
     if (lastImportIndex != -1) {
-      lines.insert(lastImportIndex + 1, importStatement);
+      lines.insert(lastImportIndex + 1, dynamicImportStatement);
     } else {
       // No imports found, add at the top
-      lines.insert(0, importStatement);
+      lines.insert(0, dynamicImportStatement);
       lines.insert(1, '');
     }
 
@@ -391,7 +427,7 @@ class LocalizationStringExtractor {
       final beforeInsertion = content.substring(0, insertPosition);
       final afterInsertion = content.substring(insertPosition);
 
-      // Add localization delegates and supported locales
+      // Add localization delegates and supported locales using the provided className
       final localizationConfig = '''
       localizationsDelegates: $className.localizationsDelegates,
       supportedLocales: $className.supportedLocales,''';
@@ -461,10 +497,11 @@ class LocalizationStringExtractor {
   Future<void> _generateL10nYaml(String outputDirectory, String className) async {
     final l10nFile = File('l10n.yaml');
 
-    if (l10nFile.existsSync()) {
-      print('ℹ️  l10n.yaml already exists, skipping generation');
-      return;
-    }
+    // Always overwrite l10n.yaml to ensure the correct className is set
+    // if (l10nFile.existsSync()) {
+    //   print('ℹ️  l10n.yaml already exists, skipping generation');
+    //   return;
+    // }
 
     final l10nConfig = '''arb-dir: $outputDirectory
 template-arb-file: app_en.arb
